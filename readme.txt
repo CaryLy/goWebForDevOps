@@ -18,11 +18,13 @@
         几个有用的命令:go install (编译打包)   go fmt(格式化) go test,  go get
 3-2本地创建运行项目
         github新建一个空项目然后克隆到本地 goWebForDevOps
+        新建目录webserver
+        cd webserver
         新建main.go
             http.ListenAndServe绑定监听端口
             http.HandleFunc指定路由及处理函数
         在当前目录执行命令:go install
-            那么在go的工作目录的bin目录下就生成了本项目的启动名称goWebForDevOps,在终端直接输入项目名goWebForDevOps就可以启动
+            那么在go的工作目录的bin目录下就生成了本项目的启动名称webserver,在终端直接输入项目名webserver就可以启动
 
 3-3将web server部署到阿里云
     交叉编辑.go源文件:
@@ -31,29 +33,64 @@
             uname -a
             输出:Linux VM_0_2_centos 3.10.0-514.26.2.el7.x86_64 #1 SMP Tue Jul 4 15:04:05 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux
             看到x86_64,是64位的
-        然后在本地,进入go项目所在目录,执行编译命令:
+        然后在本地,进入go项目下的目录webserver,执行编译命令:
         CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
 
               其中，CGO_ENABLED=0表示不使用cgo，
               GOOS：目标平台的操作系统（darwin、freebsd、linux、windows）
               GOARCH：目标平台的体系架构（386、amd64、arm）
-              执行后,项目目录中出现了DevOpsAndCloud--与项目同名的文件,就是编译生成的目标文件
+              执行后,项目目录中出现了webserver,就是编译生成的目标文件
     将目标文件也传到github上面
     然后将github上的项目克隆到云服务器
             登录到云服务器,git clone github上的项目
     在云服务器运行编译后的文件
             cd到克隆的go项目
-            ls 看到编译后的文件DevOpsAndCloud
+            找到编译的文件webserver
             运行:
-                 ./DevOpsAndCloud
+                 ./webserver
     然后就可以在网页上输入"http://ip:端口"  进行浏览了
 3-4 deployserver开发
     上面步骤比较繁琐
     git pull
     git push->git pull
     deploy
+    能不能有自动化的方式,云服务虚拟机自动获取git的更新?
     在项目中新建目录deployserver
+    vim main.go
+        //重启服务
+        func reLaunch() {
+        	cmd := exec.Command("sh", "./deploy.sh")
+        	err := cmd.Start()
+        	if err != nil {
+        		log.Fatal(err)
+        	}
+        	err = cmd.Wait()
+        }
+        func firstPage(w http.ResponseWriter, r *http.Request) {
+        	io.WriteString(w, "<h1> Hello,this is my  deploy server</h1>")
+        	reLaunch()
+        }
 
+        func main() {
+        	http.HandleFunc("/", firstPage)
+        	http.ListenAndServe(":5000", nil)
+        }
+    在项目中新建文件deploy.sh,内容如下
+            #! /bin/sh
+
+            kill -9 $(pgrep webserver)
+            cd /data/gowork/goWebForDevOps/
+            git pull https://github.com/CaryLy/goWebForDevOps.git
+            cd webserver/
+            ./webserver &
+    同理上传到github,然后在云服务虚拟机拉下来,执行deployserver,就可以浏览器访问5000端口了
+
+3.5完成自动化
+
+    在github的当前项目goWebForDevOps,点击settings,点击左边菜单有webhooks,点击Add webhook
+    Payload URL:http://ip:5000/
+    which event:  选择Just the push event.
+        那么当有push的时候,就会调用url http://ip:5000/,这个页面会执行脚本deploy.sh自动的拉取github上的代码
 
 
 
