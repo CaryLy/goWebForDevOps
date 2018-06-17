@@ -17,7 +17,8 @@ func reLaunch() {
 	err = cmd.Wait()
 }
 func firstPage(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "<h1> Hello,this is my  deploy server</h1>")
+	//io.WriteString(w, "<h1> Hello,this is my  deploy server</h1>")
+	io.WriteString(w, "<h1> Hello,this is my  deploy server2</h1>")
 	reLaunch()
 }
 
